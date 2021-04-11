@@ -1,0 +1,59 @@
+---
+title: "Лабораторная №5"
+author: "Виноградов Александр"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document: 
+    self_contained: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Вариант 3
+Задачи:
+
+Создать .Rmd скрипт, который генерирует html-отчёт с двумя картами:
+1.Картограмма с таблицей стран мира по показателю из базы Всемирного банка (интерактивная картограмма из примера).
+2.Карта с маркерами или с радиусами, построенная по набору данных с Портала открытых данных РФ.
+
+WDI: любой показатель из раздела "Climate Change" (Изменение климата). Портал открытых данных:Портал открытых данных: Объекты культурного наследия на территории Костромской области (id: 4401168294-oknkosobl), взять только расположенные в городе Галич
+
+Выбранный показатель: Выбросы CO2 (КТ) за 2016 год, индикатор: EN.ATM.CO2E.KT
+
+
+```{r, results='asis', cache=TRUE, warning=F, message=F}
+library('WDI')
+library('data.table')
+library('leaflet')
+suppressPackageStartupMessages(library('googleVis'))
+
+# Индикатор показателя
+indicator.code <- 'EN.ATM.CO2E.KT'
+
+df <- read.csv('./data/dataWDI.csv', header = T, sep = ',')
+df <- data.table(df)
+
+# Коды стран iso2
+fileURL <- 'https://pkgstore.datahub.io/core/country-list/data_csv/data/d7c9d7cfb42cb69f4422dec222dbbaa8/data_csv.csv'
+all.iso2.country.codes <- read.csv(fileURL, stringsAsFactors = F, na.strings = '.')
+
+# Убираем макрорегионы
+df <- na.omit(df[iso2c %in% all.iso2.country.codes$Code, ])
+
+# Объект таблица исходных данных
+g.tbl <- gvisTable(data = df[, -'year'], 
+                   options = list(width = 300, height = 400))
+
+# Объект интерактивная карта
+g.chart <- gvisGeoChart(data = df, locationvar = 'iso2c',
+                        hovervar = 'country', colorvar = indicator.code,
+                        options = list(width = 500, height = 400, 
+                                       dataMode = 'regions'))
+
+# Разместить таблицу и карту на одной панели
+TG <- gvisMerge(g.tbl, g.chart, horizontal = TRUE,
+                 tableOptions = 'bgcolor=\"#CCCCCC\" cellspacing=10')
+TG
+```
